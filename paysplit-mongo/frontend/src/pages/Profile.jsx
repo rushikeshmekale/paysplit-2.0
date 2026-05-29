@@ -130,7 +130,7 @@ const Profile = () => {
           <Row
             icon={<Bell size={18} className="text-gray-400" />}
             label="Auto-Reminders"
-            right={<Toggle active={autoReminders} onToggle={() => setAutoReminders(!autoReminders)} />}
+            right={<const Togglele active={autoReminders} onToggle={() => setAutoReminders(!autoReminders)} />}
           />
           <Row
             icon={<Bell size={18} className="text-gray-400" />}
