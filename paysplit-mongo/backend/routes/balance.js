@@ -8,7 +8,12 @@ router.use(protect)
 // ── GET /api/balance ────────────────────────────────────────────
 router.get('/', async (req, res) => {
   try {
-    const expenses = await Expense.find({ user_id: req.user._id }).lean()
+    // Only count NON-settled expenses
+    const expenses = await Expense.find({
+      user_id: req.user._id,
+      settled_at: null
+    }).lean()
+
     const userName = req.user.name
 
     let you_owe = 0
@@ -17,11 +22,12 @@ router.get('/', async (req, res) => {
     for (const exp of expenses) {
       if (exp.split_mode === 'no_split') continue
       const paid_by = exp.paid_by
+
       for (const p of exp.participants || []) {
         if (p.name === paid_by) continue
         const amt = Number(p.amount || 0)
-        if (paid_by === userName)    they_owe += amt
-        else if (p.name === userName) you_owe  += amt
+        if (paid_by === userName)      they_owe += amt
+        else if (p.name === userName)  you_owe  += amt
       }
     }
 
@@ -34,6 +40,7 @@ router.get('/', async (req, res) => {
 // ── GET /api/balance/stats ──────────────────────────────────────
 router.get('/stats', async (req, res) => {
   try {
+    // Stats show ALL expenses including settled (for history)
     const expenses = await Expense.find({ user_id: req.user._id }).lean()
 
     const total = expenses.reduce((s, e) => s + Number(e.total_amount), 0)
@@ -43,7 +50,11 @@ router.get('/stats', async (req, res) => {
       categories[c] = (categories[c] || 0) + Number(e.total_amount)
     }
 
-    res.json({ total_expenses: total, categories, expense_count: expenses.length })
+    res.json({
+      total_expenses: total,
+      categories,
+      expense_count: expenses.length
+    })
   } catch (err) {
     res.status(500).json({ message: err.message })
   }
