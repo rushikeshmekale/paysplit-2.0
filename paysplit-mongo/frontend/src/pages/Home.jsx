@@ -20,10 +20,7 @@ const Home = () => {
   const [recog,    setRecog]    = useState(null)
   const [loading,  setLoading]  = useState(true)
 
-  useEffect(() => {
-    fetchAll()
-    initVoice()
-  }, [])
+  useEffect(() => { fetchAll(); initVoice() }, [])
 
   const fetchAll = async () => {
     setLoading(true)
@@ -49,32 +46,136 @@ const Home = () => {
   }
 
   const startRec = () => {
-    if (recog) { setIsRec(true); recog.start(); toast.info('🎙️ Listening… say "Rohit 80, me 60, paid by me"') }
-    else toast.error('Voice not supported in this browser')
+    if (recog) {
+      setIsRec(true)
+      recog.start()
+      toast.info('🎙️ Listening… say "I paid Aryan 300 for food"')
+    } else {
+      toast.error('Voice not supported in this browser')
+    }
   }
 
-  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1)
+  const cap = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : ''
 
   const parseVoice = (t) => {
-    const parts = t.toLowerCase().split(',')
-    const participants = []
-    let paidBy = ''
-    parts.forEach((part) => {
-      const s = part.trim()
-      if (s.includes('paid by')) {
-        const p = s.replace('paid by', '').trim()
-        paidBy = p === 'me' ? user.name : cap(p)
-      } else {
-        const m = s.match(/(\w+)\s+(\d+(?:\.\d+)?)/)
-        if (m) participants.push({ name: m[1] === 'me' ? user.name : cap(m[1]), amount: parseFloat(m[2]) })
+    const raw = t.toLowerCase().trim()
+    console.log('Voice input:', raw)
+
+    let paidBy = user.name
+    let title = 'Voice Expense'
+    let amount = 0
+    let friendName = ''
+    let iAmPayer = true
+
+    // Pattern 1: "I paid Aryan 300 for food" / "paid Aryan 300"
+    const iPaidPattern = /(?:i\s+)?(?:paid|gave|given|lent|sent|transferred)\s+(\w+)\s+(?:rs\.?|₹|rupees?)?\s*(\d+(?:\.\d+)?)(?:\s+for\s+(.+))?/i
+    // Pattern 2: "Aryan paid me 300" / "Aryan gave me 300 for food"
+    const theyPaidPattern = /(\w+)\s+(?:paid|gave|given|sent|transferred)\s+(?:me|us)\s+(?:rs\.?|₹|rupees?)?\s*(\d+(?:\.\d+)?)(?:\s+for\s+(.+))?/i
+    // Pattern 3: "Aryan owes me 300"
+    const owesPattern = /(\w+)\s+owes?\s+(?:me|us)\s+(?:rs\.?|₹|rupees?)?\s*(\d+(?:\.\d+)?)(?:\s+for\s+(.+))?/i
+    // Pattern 4: "I owe Aryan 300"
+    const iOwePattern = /(?:i\s+)?owe\s+(\w+)\s+(?:rs\.?|₹|rupees?)?\s*(\d+(?:\.\d+)?)(?:\s+for\s+(.+))?/i
+    // Pattern 5: "300 for food with Aryan" / "300 to Aryan"
+    const amountFirstPattern = /(?:rs\.?|₹|rupees?)?\s*(\d+(?:\.\d+)?)\s+(?:for\s+\w+\s+)?(?:to|with|from)\s+(\w+)(?:\s+for\s+(.+))?/i
+
+    let match = null
+
+    if ((match = raw.match(iPaidPattern))) {
+      friendName = cap(match[1])
+      amount = parseFloat(match[2])
+      title = match[3] ? cap(match[3].trim()) : `Payment to ${friendName}`
+      paidBy = user.name
+      iAmPayer = true
+    } else if ((match = raw.match(theyPaidPattern))) {
+      friendName = cap(match[1])
+      amount = parseFloat(match[2])
+      title = match[3] ? cap(match[3].trim()) : `Payment from ${friendName}`
+      paidBy = friendName
+      iAmPayer = false
+    } else if ((match = raw.match(owesPattern))) {
+      friendName = cap(match[1])
+      amount = parseFloat(match[2])
+      title = match[3] ? cap(match[3].trim()) : `${friendName} owes me`
+      paidBy = user.name
+      iAmPayer = true
+    } else if ((match = raw.match(iOwePattern))) {
+      friendName = cap(match[1])
+      amount = parseFloat(match[2])
+      title = match[3] ? cap(match[3].trim()) : `I owe ${friendName}`
+      paidBy = friendName
+      iAmPayer = false
+    } else if ((match = raw.match(amountFirstPattern))) {
+      amount = parseFloat(match[1])
+      friendName = cap(match[2])
+      title = match[3] ? cap(match[3].trim()) : `Payment with ${friendName}`
+      paidBy = user.name
+      iAmPayer = true
+    } else {
+      // Fallback: old format "Rohit 80, me 60, paid by me"
+      const parts = raw.split(',')
+      const participants = []
+      let pb = user.name
+      parts.forEach((part) => {
+        const s = part.trim()
+        if (s.includes('paid by')) {
+          const p = s.replace('paid by', '').trim()
+          pb = p === 'me' ? user.name : cap(p)
+        } else {
+          const m2 = s.match(/(\w+)\s+(\d+(?:\.\d+)?)/)
+          if (m2) participants.push({ name: m2[1] === 'me' ? user.name : cap(m2[1]), amount: parseFloat(m2[2]) })
+        }
+      })
+      if (participants.length) {
+        navigate('/expenses', {
+          state: {
+            voiceData: {
+              participants,
+              paidBy: pb,
+              totalAmount: participants.reduce((s, p) => s + p.amount, 0),
+              title: 'Voice Expense',
+              split_mode: 'custom',
+            }
+          }
+        })
+        return
       }
-    })
-    if (participants.length && paidBy) {
+      toast.error('Try: "I paid Aryan 300 for food" or "Aryan paid me 200"')
+      return
+    }
+
+    if (friendName && amount > 0) {
+      // Skip common words mistaken as names
+      const skipWords = ['me', 'us', 'him', 'her', 'them', 'you', 'my', 'the', 'a', 'an']
+      if (skipWords.includes(friendName.toLowerCase())) {
+        toast.error('Could not detect friend name. Try: "I paid Aryan 300 for food"')
+        return
+      }
+
+      const participants = iAmPayer
+        ? [
+            { name: user.name, amount: 0, percentage: 0 },
+            { name: friendName, amount: amount, percentage: 100 },
+          ]
+        : [
+            { name: user.name, amount: amount, percentage: 100 },
+            { name: friendName, amount: 0, percentage: 0 },
+          ]
+
+      toast.success(`🎙️ "${title}" ₹${amount} — ${iAmPayer ? `you paid ${friendName}` : `${friendName} paid you`}`)
+
       navigate('/expenses', {
-        state: { voiceData: { participants, paidBy, totalAmount: participants.reduce((s, p) => s + p.amount, 0) } }
+        state: {
+          voiceData: {
+            participants,
+            paidBy,
+            totalAmount: amount,
+            title,
+            split_mode: 'custom',
+          }
+        }
       })
     } else {
-      toast.error('Try: "Rohit 80, me 60, paid by me"')
+      toast.error('Try: "I paid Aryan 300 for food" or "Aryan paid me 200"')
     }
   }
 
@@ -161,10 +262,13 @@ const Home = () => {
           <div className="absolute top-0 right-0 w-36 h-36 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
           <div className="absolute bottom-0 left-8 w-20 h-20 bg-white/5 rounded-full translate-y-1/2" />
           <div className="relative flex items-center justify-between">
-            <div>
+            <div className="flex-1 mr-4">
               <p className="text-white/70 text-xs font-bold tracking-widest uppercase mb-1">Quick Add</p>
-              <p className="text-white text-2xl font-bold">New Expense?</p>
-              <p className="text-white/60 text-xs mt-1">Say: "Rohit 80, me 60, paid by me"</p>
+              <p className="text-white text-xl font-bold">New Expense?</p>
+              <p className="text-white/60 text-[11px] mt-1 leading-relaxed">
+                Say: "I paid Aryan 300 for food"<br/>
+                or "Aryan paid me 500"
+              </p>
             </div>
             <button
               onClick={startRec} disabled={isRec}
@@ -186,15 +290,10 @@ const Home = () => {
           )}
         </div>
 
-        {/* Balance Card */}
-        <div className="glass-card p-5 hover-lift">
-          <p className="text-xs font-bold tracking-widest uppercase text-gray-400 mb-4">Pending Settlements</p>
-          {balance.you_owe === 0 && balance.they_owe === 0 ? (
-            <div className="text-center py-3">
-              <div className="w-10 h-10 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-2 text-xl">✅</div>
-              <p className="text-sm font-bold text-emerald-600">All settled up!</p>
-            </div>
-          ) : (
+        {/* Balance Card — only show if there are pending amounts */}
+        {(balance.you_owe > 0 || balance.they_owe > 0) && (
+          <div className="glass-card p-5 hover-lift">
+            <p className="text-xs font-bold tracking-widests uppercase text-gray-400 mb-4">Pending Settlements</p>
             <div className="space-y-3">
               {balance.you_owe > 0 && (
                 <div className="flex items-center justify-between p-3 bg-red-50 rounded-2xl">
@@ -223,8 +322,8 @@ const Home = () => {
                 </div>
               )}
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Recent Activity */}
         <div>
@@ -276,7 +375,7 @@ const Home = () => {
               <div className="glass-card p-10 text-center">
                 <div className="text-4xl mb-3">📭</div>
                 <p className="text-sm font-bold text-gray-400">No expenses yet</p>
-                <p className="text-xs text-gray-300 mt-1">Add your first one above!</p>
+                <p className="text-xs text-gray-300 mt-1">Tap mic or add expense above!</p>
               </div>
             )}
           </div>

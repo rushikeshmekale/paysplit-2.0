@@ -35,11 +35,11 @@ const Expenses = () => {
   useEffect(() => {
     fetchExpenses()
     if (location.state?.voiceData) {
-      const { participants: vp, paidBy: vpb } = location.state.voiceData
+      const { participants: vp, paidBy: vpb, title: vt, split_mode: vsm } = location.state.voiceData
       setPaidBy(vpb)
       setParticipants(vp.map((p) => ({ name: p.name, amount: p.amount.toString(), percentage: 0 })))
-      setTitle('Voice Expense')
-      setSplitMode('custom')
+      setTitle(vt || 'Voice Expense')
+      setSplitMode(vsm || 'custom')
       setShowModal(true)
     }
   }, [location])

@@ -130,7 +130,7 @@ const Profile = () => {
           <Row
             icon={<Bell size={18} className="text-gray-400" />}
             label="Auto-Reminders"
-            right={<const Togglele active={autoReminders} onToggle={() => setAutoReminders(!autoReminders)} />}
+            right={<Toggle active={autoReminders} onToggle={() => setAutoReminders(!autoReminders)} />}
           />
           <Row
             icon={<Bell size={18} className="text-gray-400" />}
@@ -179,8 +179,7 @@ const Profile = () => {
         {/* App info */}
         <div className="glass-card p-4 flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold text-gray-500">PAYSPLIT · VITE EDITION</p>
-            <p className="text-xs text-gray-400 mt-0.5">v1.0.0 · React + Vite + Supabase</p>
+            <p className="text-xs font-bold text-gray-500">PAYSPLIT · v1.0.0</p>
           </div>
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#7c3aed] to-[#a855f7] flex items-center justify-center">
             <span className="text-white font-bold text-base">₹</span>

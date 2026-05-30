@@ -91,7 +91,7 @@ const Login = () => {
           </div>
         </div>
 
-        <p className="text-center text-xs text-gray-400 mt-5">PaySplit · Powered by Supabase</p>
+        <p className="text-center text-xs text-gray-400 mt-5">PaySplit</p>
       </div>
     </div>
   )
