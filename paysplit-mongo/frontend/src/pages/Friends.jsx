@@ -66,11 +66,11 @@ const Friends = () => {
   const handlePay = (friend) => {
   const upiId = contacts[friend.name] || friend.phone
 
-  if (!phone) {
-    setPhoneModalFor(friend.name)
-    setPhoneInput('')
-    return
-  }
+  if (!upiId) {
+  setPhoneModalFor(friend.name)
+  setPhoneInput('')
+  return
+}
 
   const amount = Math.abs(friend.balance).toFixed(2)
 
@@ -379,7 +379,7 @@ const savePhone = async () => {
               </p>
 
               <input
-                type="tel"
+                type="text"
                 value={phoneInput}
                 onChange={(e) => setPhoneInput(e.target.value)}
                 placeholder="rushikesh@ybl"
