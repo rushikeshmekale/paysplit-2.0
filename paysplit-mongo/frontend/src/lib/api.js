@@ -70,3 +70,11 @@ export const getFriends = () => authFetch('/api/friends')
 
 export const settleWithFriend = (name) =>
   authFetch(`/api/friends/${encodeURIComponent(name)}/settle`, { method: 'POST' })
+
+export const updateProfile = (body) =>
+  authFetch('/api/auth/profile', { method: 'PUT', body: JSON.stringify(body) })
+
+export const getContacts = () => authFetch('/api/contacts')
+export const updateContact = (name, phone) =>
+  authFetch(`/api/contacts/${encodeURIComponent(name)}`, { method: 'PUT', body: JSON.stringify({ phone }) })
+

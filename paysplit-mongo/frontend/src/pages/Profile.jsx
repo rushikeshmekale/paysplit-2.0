@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { updateProfile } from '../lib/api'
 import { useNavigate } from 'react-router-dom'
 import BottomNav from '../components/BottomNav'
 import {
@@ -9,18 +10,37 @@ import {
 import { toast } from 'sonner'
 
 const Profile = () => {
-  const { user, logout } = useAuth()
+  const { user, logout, updateUser } = useAuth()
   const navigate = useNavigate()
   const [darkMode,      setDarkMode]      = useState(false)
   const [autoReminders, setAutoReminders] = useState(true)
   const [pushNotifs,    setPushNotifs]    = useState(true)
-
+  const [editing, setEditing] = useState(false)
+  const [editName, setEditName] = useState(user?.name || '')
+  const [editPhone, setEditPhone] = useState(user?.phone || '')
+  const [editImage, setEditImage] = useState(user?.profile_image || '')
   const handleLogout = async () => {
     await logout()
     toast.success('See you soon! 👋')
     navigate('/login')
   }
 
+  const saveProfile = async () => {
+  try {
+    const updated = await updateProfile({
+      name: editName,
+      phone: editPhone,
+      profile_image: editImage,
+    })
+
+    updateUser(updated)
+
+    toast.success('Profile updated')
+    setEditing(false)
+  } catch (err) {
+    toast.error(err.message ?? 'Failed to update profile')
+  }
+}
   const Toggle = ({ active, onToggle }) => (
     <button type="button" onClick={onToggle} className={`toggle-switch ${active ? 'active' : ''}`} />
   )
@@ -66,7 +86,7 @@ const Profile = () => {
               />
             </div>
             <button
-              onClick={() => toast.info('Profile editing coming soon!')}
+                onClick={() => setEditing(!editing)}
               className="absolute -bottom-1.5 -right-1.5 w-8 h-8 rounded-xl bg-gradient-to-br from-[#7c3aed] to-[#a855f7] flex items-center justify-center text-white shadow-md"
             >
               <PencilSimple size={14} weight="bold" />
@@ -75,6 +95,81 @@ const Profile = () => {
 
           <h2 className="text-xl font-bold text-gray-900">{user?.name ?? 'User'}</h2>
           <p className="text-sm text-gray-400 mt-0.5">{user?.email}</p>
+ {editing && (
+  <>
+    {/* Backdrop */}
+    <div
+      className="modal-backdrop"
+      onClick={() => setEditing(false)}
+    />
+
+    {/* Bottom Sheet */}
+    <div className="bottom-sheet">
+      <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-5" />
+
+      <h3 className="text-lg font-bold text-gray-900 mb-4">
+        Edit Profile
+      </h3>
+
+      <div className="space-y-4">
+        <div>
+          <label className="text-sm font-medium text-gray-600 block mb-1">
+            Name
+          </label>
+          <input
+            type="text"
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            placeholder="Your name"
+          />
+        </div>
+
+        <div>
+          <label className="text-sm font-medium text-gray-600 block mb-1">
+            Phone
+          </label>
+          <input
+            type="tel"
+            value={editPhone}
+            onChange={(e) => setEditPhone(e.target.value)}
+            className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            placeholder="Phone number"
+          />
+        </div>
+
+        <div>
+          <label className="text-sm font-medium text-gray-600 block mb-1">
+            Profile Image URL
+          </label>
+          <input
+            type="text"
+            value={editImage}
+            onChange={(e) => setEditImage(e.target.value)}
+            className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            placeholder="https://..."
+          />
+        </div>
+
+        <div className="flex gap-3 pt-2">
+          <button
+            onClick={() => setEditing(false)}
+            className="flex-1 py-3 rounded-2xl bg-gray-100 font-semibold text-gray-700"
+          >
+            Cancel
+          </button>
+
+          <button
+            onClick={saveProfile}
+            className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-[#7c3aed] to-[#a855f7] text-white font-semibold"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  </>
+)}
 
           {/* Score badge */}
           <div className={`mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full border ${sBg}`}>

@@ -18,9 +18,11 @@ const expenseSchema = new mongoose.Schema(
     category:     { type: String, default: 'Other', enum: ['Food','Transport','Entertainment','Shopping','Bills','Other'] },
     split_mode:   { type: String, default: 'equal', enum: ['no_split','equal','percentage','custom'] },
     participants: { type: [participantSchema], default: [] },
+    settled_at:   { type: Date, default: null },  // ← ADD THIS LINE
   },
   { timestamps: true }
 )
+
 
 // Index for fast user queries
 expenseSchema.index({ user_id: 1, createdAt: -1 })

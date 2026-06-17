@@ -6,6 +6,7 @@ import authRoutes    from './routes/auth.js'
 import expenseRoutes from './routes/expenses.js'
 import friendRoutes  from './routes/friends.js'
 import balanceRoutes from './routes/balance.js'
+import contactRoutes from './routes/contacts.js'
 
 dotenv.config()
 
@@ -49,7 +50,7 @@ app.use('/api/auth',     authRoutes)
 app.use('/api/expenses', expenseRoutes)
 app.use('/api/friends',  friendRoutes)
 app.use('/api/balance',  balanceRoutes)
-
+app.use('/api/contacts', contactRoutes)
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', message: 'PaySplit API running' })
 })

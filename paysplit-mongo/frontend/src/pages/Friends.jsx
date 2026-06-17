@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import BottomNav from '../components/BottomNav'
-import { getFriends, settleWithFriend } from '../lib/api'
+import {
+  getFriends,
+  settleWithFriend,
+  getContacts,
+  updateContact
+} from '../lib/api'
 import {
   CurrencyCircleDollar, Handshake, Bell, Users,
   ArrowUp, ArrowDown, CheckCircle, Clock
@@ -14,7 +19,22 @@ const Friends = () => {
   const [loading,   setLoading]   = useState(true)
   const [settling,  setSettling]  = useState(null)
   const [filter,    setFilter]    = useState('all') // all | owe | owed
+  const [contacts, setContacts] = useState({})
+  const [phoneModalFor, setPhoneModalFor] = useState(null)
+  const [phoneInput, setPhoneInput] = useState('')
+  useEffect(() => {
+  getContacts()
+    .then(list => {
+      const map = {}
 
+      list.forEach(c => {
+        map[c.friend_name] = c.phone
+      })
+
+      setContacts(map)
+    })
+    .catch(() => {})
+}, [])
   useEffect(() => { fetchFriends() }, [])
 
   const fetchFriends = async () => {
@@ -25,20 +45,60 @@ const Friends = () => {
   }
 
   const handleSettle = async (name) => {
-    setSettling(name)
-    try {
-      await settleWithFriend(name)
+  setSettling(name)
+  try {
+    const result = await settleWithFriend(name)
+    if (result.settled_count > 0) {
       toast.success(`✅ Settled with ${name}!`)
-      fetchFriends()
-    } catch {
-      toast.error('Failed to settle')
+    } else {
+      toast.info(`Nothing to settle with ${name}`)
     }
-    setSettling(null)
+    fetchFriends()
+  } catch {
+    toast.error('Failed to settle')
   }
-
+  setSettling(null)
+}
   const handlePing = (name) => {
     toast.success(`🔔 Reminder sent to ${name}!`)
   }
+
+  const handlePay = (friend) => {
+  const phone = contacts[friend.name] || friend.phone
+
+  if (!phone) {
+    setPhoneModalFor(friend.name)
+    setPhoneInput('')
+    return
+  }
+
+  const amount = Math.abs(friend.balance).toFixed(2)
+
+  const link =
+    `upi://pay?pa=${phone}@upi` +
+    `&pn=${encodeURIComponent(friend.name)}` +
+    `&am=${amount}` +
+    `&cu=INR` +
+    `&tn=${encodeURIComponent('PaySplit settlement')}`
+
+  window.location.href = link
+}
+
+const savePhone = async () => {
+  try {
+    await updateContact(phoneModalFor, phoneInput)
+
+    setContacts(prev => ({
+      ...prev,
+      [phoneModalFor]: phoneInput,
+    }))
+
+    toast.success('Number saved')
+    setPhoneModalFor(null)
+  } catch {
+    toast.error('Could not save number')
+  }
+}
 
   const totalOwed  = friends.filter(f => f.balance > 0).reduce((s, f) => s + f.balance, 0)
   const totalOwing = friends.filter(f => f.balance < 0).reduce((s, f) => s + Math.abs(f.balance), 0)
@@ -177,6 +237,17 @@ const Friends = () => {
 
                         <div className="flex-1 min-w-0">
                           <h3 className="font-bold text-gray-900">{friend.name}</h3>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => {
+                                setPhoneModalFor(friend.name)
+                                setPhoneInput(contacts[friend.name] || '')
+                              }}
+                              className="text-[10px] text-[#7c3aed] font-bold"
+                            >
+                              {contacts[friend.name] ? 'Edit Number' : 'Add Number'}
+                            </button>
+                          </div>
                           <p className="text-xs text-gray-400 truncate">{friend.email}</p>
                           {friend.is_registered && (
                             <span className="text-[9px] font-bold px-1.5 py-0.5 bg-purple-50 text-[#7c3aed] rounded-full">
@@ -230,7 +301,7 @@ const Friends = () => {
                       <div className="flex gap-2">
                         {/* Pay button */}
                         <button
-                          onClick={() => toast.info('UPI payment coming soon!')}
+                          onClick={() => handlePay(friend)}
                           className="flex-1 py-2.5 bg-purple-50 text-[#7c3aed] rounded-xl font-bold text-xs transition-all active:scale-95 flex items-center justify-center gap-1.5 hover:bg-purple-100"
                         >
                           <CurrencyCircleDollar size={16} weight="fill" /> Pay
@@ -289,6 +360,50 @@ const Friends = () => {
         )}
 
       </div>
+              {phoneModalFor && (
+          <>
+            <div
+              className="modal-backdrop"
+              onClick={() => setPhoneModalFor(null)}
+            />
+
+            <div className="bottom-sheet">
+              <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-5" />
+
+              <h3 className="text-lg font-bold mb-4">
+                Save UPI Number
+              </h3>
+
+              <p className="text-sm text-gray-500 mb-3">
+                {phoneModalFor}
+              </p>
+
+              <input
+                type="tel"
+                value={phoneInput}
+                onChange={(e) => setPhoneInput(e.target.value)}
+                placeholder="9876543210"
+                className="w-full px-4 py-3 border rounded-2xl"
+              />
+
+              <div className="flex gap-3 mt-4">
+                <button
+                  onClick={() => setPhoneModalFor(null)}
+                  className="flex-1 py-3 rounded-2xl bg-gray-100"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  onClick={savePhone}
+                  className="flex-1 py-3 rounded-2xl bg-[#7c3aed] text-white"
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       <BottomNav />
     </div>
   )

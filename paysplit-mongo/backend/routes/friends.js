@@ -2,6 +2,7 @@ import express from 'express'
 import User from '../models/User.js'
 import Expense from '../models/Expense.js'
 import protect from '../middleware/auth.js'
+import Contact from '../models/Contact.js'
 
 const router = express.Router()
 router.use(protect)
@@ -51,6 +52,10 @@ router.get('/', async (req, res) => {
     const userMap = {}
     registeredUsers.forEach(u => { userMap[u.name] = u })
 
+    const contacts = await Contact.find({ user_id: currentUser._id }).lean()
+    const contactMap = {}
+    contacts.forEach(c => { contactMap[c.friend_name] = c.phone })
+
     // Build friends list — include anyone with non-zero balance OR who is a registered user
     const friends = Array.from(friendSet)
       .map(friendName => {
@@ -60,6 +65,7 @@ router.get('/', async (req, res) => {
           name:          friendName,
           email:         registeredUser?.email || `${friendName.toLowerCase()}@paysplit.app`,
           profile_image: registeredUser?.profile_image || null,
+          phone: contactMap[friendName] || registeredUser?.phone || '',
           balance:       Math.round((balances[friendName] || 0) * 100) / 100,
           is_registered: !!registeredUser,
         }

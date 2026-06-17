@@ -8,6 +8,7 @@ const userSchema = new mongoose.Schema(
     password: { type: String, required: true, minlength: 6 },
     profile_image: { type: String, default: '' },
     social_credit_score: { type: Number, default: 850 },
+    phone: { type: String, default: '' },
   },
   { timestamps: true }
 )
