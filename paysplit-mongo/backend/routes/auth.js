@@ -83,6 +83,36 @@ router.get('/me', protect, async (req, res) => {
   })
 })
 
+// ── PUT /api/auth/profile ───────────────────────────────────────
+// Update name and/or profile_image for the logged-in user
+router.put('/profile', protect, async (req, res) => {
+  try {
+    const { name, profile_image } = req.body
+
+    if (name !== undefined) {
+      const trimmed = String(name).trim()
+      if (!trimmed) return res.status(400).json({ message: 'Name cannot be empty' })
+      req.user.name = trimmed
+    }
+
+    if (profile_image !== undefined) {
+      req.user.profile_image = profile_image
+    }
+
+    await req.user.save()
+
+    res.json({
+      id:    req.user._id,
+      name:  req.user.name,
+      email: req.user.email,
+      profile_image: req.user.profile_image,
+      social_credit_score: req.user.social_credit_score,
+    })
+  } catch (err) {
+    res.status(500).json({ message: err.message })
+  }
+})
+
 // ── POST /api/auth/logout ───────────────────────────────────────
 // JWT is stateless — client just deletes the token
 router.post('/logout', (_req, res) => {

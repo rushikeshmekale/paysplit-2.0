@@ -23,28 +23,22 @@ router.get('/', async (req, res) => {
 
     for (const exp of expenses) {
       if (exp.split_mode === 'no_split') continue
-      const paid_by = exp.paid_by
+      const paidBy = exp.paid_by
 
-      for (const p of exp.participants || []) {
-        const friendName = p.name
-        if (friendName === userName) continue
-
-        friendSet.add(friendName)
-        const amt = Number(p.amount || 0)
-
-        if (paid_by === userName) {
-          // I paid → friend owes me → positive
-          balances[friendName] = (balances[friendName] || 0) + amt
-        } else if (paid_by === friendName) {
-          // Friend paid → I owe friend → negative
-          if (p.name === userName) {
-            balances[friendName] = (balances[friendName] || 0) - amt
-          }
+      if (paidBy === userName) {
+        // I paid the bill → every OTHER participant owes me their share
+        for (const p of exp.participants || []) {
+          if (p.name === userName) continue
+          friendSet.add(p.name)
+          balances[p.name] = (balances[p.name] || 0) + Number(p.amount || 0)
         }
-      }
-
-      if (paid_by !== userName) {
-        friendSet.add(paid_by)
+      } else {
+        // Someone else paid the bill → if I'm a participant, I owe them my share
+        friendSet.add(paidBy)
+        const myShare = (exp.participants || []).find(p => p.name === userName)
+        if (myShare) {
+          balances[paidBy] = (balances[paidBy] || 0) - Number(myShare.amount || 0)
+        }
       }
     }
 
@@ -57,13 +51,12 @@ router.get('/', async (req, res) => {
     const userMap = {}
     registeredUsers.forEach(u => { userMap[u.name] = u })
 
-    // Build friends list — include anyone with non-zero balance
+    // Build friends list — include anyone with non-zero balance OR who is a registered user
     const friends = Array.from(friendSet)
-      .filter(name => balances[name] !== 0 || userMap[name]) // only show if balance or registered
       .map(friendName => {
         const registeredUser = userMap[friendName]
         return {
-          id:            registeredUser?._id || friendName,
+          id:            registeredUser?._id?.toString() || friendName,
           name:          friendName,
           email:         registeredUser?.email || `${friendName.toLowerCase()}@paysplit.app`,
           profile_image: registeredUser?.profile_image || null,
@@ -72,7 +65,7 @@ router.get('/', async (req, res) => {
         }
       })
 
-    // Sort: people who owe you first, then who you owe, then settled
+    // Sort: people who owe you first (desc), then who you owe (desc), then settled
     friends.sort((a, b) => {
       if (a.balance > 0 && b.balance <= 0) return -1
       if (b.balance > 0 && a.balance <= 0) return 1
@@ -91,7 +84,7 @@ router.get('/', async (req, res) => {
 // ── POST /api/friends/:name/settle ─────────────────────────────
 router.post('/:name/settle', async (req, res) => {
   try {
-    const friendName  = req.params.name
+    const friendName  = decodeURIComponent(req.params.name)
     const currentUser = req.user
     const userName    = currentUser.name
 
@@ -102,12 +95,12 @@ router.post('/:name/settle', async (req, res) => {
         settled_at: null,
         split_mode: { $ne: 'no_split' },
         $or: [
-          // I paid, friend is participant
+          // I paid, friend is a participant
           {
             paid_by: userName,
             'participants.name': friendName
           },
-          // Friend paid, I am participant
+          // Friend paid, I am a participant
           {
             paid_by: friendName,
             'participants.name': userName

@@ -44,6 +44,16 @@ const Expenses = () => {
     }
   }, [location])
 
+  // Lock body scroll when modal is open (prevents background scroll on mobile)
+  useEffect(() => {
+    if (showModal) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [showModal])
+
   const fetchExpenses = async () => {
     setLoading(true)
     try { setExpenses(await getExpenses()) }
@@ -261,22 +271,27 @@ const Expenses = () => {
 
       {/* ── Add Expense Modal ─────────────────────────── */}
       {showModal && (
-        <div className="fixed inset-0 modal-backdrop flex items-end justify-center z-50">
-          <div className="w-full max-w-md bottom-sheet max-h-[95vh] overflow-y-auto">
-            <div className="p-6">
+        <div className="fixed inset-0 modal-backdrop flex items-end justify-center z-[100]">
+          <div className="w-full max-w-md bg-white rounded-t-[28px] flex flex-col" style={{ maxHeight: '90vh', boxShadow: '0 -8px 40px rgba(0,0,0,0.14)' }}>
+
+            {/* Sticky header */}
+            <div className="px-6 pt-6 pb-2 flex-shrink-0">
               <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex justify-between items-center">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">Add Expense</h2>
                   <p className="text-xs text-gray-400">Who paid? Who owes? How much?</p>
                 </div>
                 <button onClick={() => setShowModal(false)}
-                  className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200">
+                  className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 flex-shrink-0">
                   <X size={18} />
                 </button>
               </div>
+            </div>
 
-              <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Scrollable form body */}
+            <form onSubmit={handleSubmit} id="expense-form" className="flex-1 overflow-y-auto px-6">
+              <div className="space-y-5 pt-2">
 
                 {/* Title */}
                 <div>
@@ -377,14 +392,27 @@ const Expenses = () => {
                     <span className="text-sm font-bold text-[#7c3aed]">₹{totalAmount.toFixed(2)}</span>
                   </div>
                 )}
+              </div>
 
-                <button type="submit" disabled={submitting}
-                  className="btn-primary w-full py-4 rounded-2xl flex items-center justify-center gap-2 text-sm mt-2">
-                  {submitting
-                    ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    : 'Add Expense 🎉'}
-                </button>
-              </form>
+              {/* Spacer so content never hides behind sticky submit button */}
+              <div className="h-4" />
+            </form>
+
+            {/* Sticky submit button — always visible, never scrolls away, sits above safe-area */}
+            <div
+              className="flex-shrink-0 px-6 pt-3 border-t border-gray-100 bg-white"
+              style={{ paddingBottom: 'max(24px, env(safe-area-inset-bottom, 24px))' }}
+            >
+              <button
+                type="submit"
+                form="expense-form"
+                disabled={submitting}
+                className="btn-primary w-full py-4 rounded-2xl flex items-center justify-center gap-2 text-sm"
+              >
+                {submitting
+                  ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  : 'Add Expense 🎉'}
+              </button>
             </div>
           </div>
         </div>

@@ -16,18 +16,23 @@ router.get('/', async (req, res) => {
 
     const userName = req.user.name
 
-    let you_owe = 0
+    let you_owe  = 0
     let they_owe = 0
 
     for (const exp of expenses) {
       if (exp.split_mode === 'no_split') continue
-      const paid_by = exp.paid_by
+      const paidBy = exp.paid_by
 
-      for (const p of exp.participants || []) {
-        if (p.name === paid_by) continue
-        const amt = Number(p.amount || 0)
-        if (paid_by === userName)      they_owe += amt
-        else if (p.name === userName)  you_owe  += amt
+      if (paidBy === userName) {
+        // I paid → sum up what every other participant owes me
+        for (const p of exp.participants || []) {
+          if (p.name === userName) continue
+          they_owe += Number(p.amount || 0)
+        }
+      } else {
+        // Someone else paid → my own share is what I owe
+        const myShare = (exp.participants || []).find(p => p.name === userName)
+        if (myShare) you_owe += Number(myShare.amount || 0)
       }
     }
 
