@@ -22,6 +22,7 @@ const Friends = () => {
   const [contacts, setContacts] = useState({})
   const [phoneModalFor, setPhoneModalFor] = useState(null)
   const [phoneInput, setPhoneInput] = useState('')
+  const [paymentFriend, setPaymentFriend] = useState(null)
   useEffect(() => {
   getContacts()
     .then(list => {
@@ -36,7 +37,25 @@ const Friends = () => {
     .catch(() => {})
 }, [])
   useEffect(() => { fetchFriends() }, [])
+  useEffect(() => {
+  const onFocus = () => {
+    const pending = localStorage.getItem('pending_payment')
 
+    if (!pending) return
+
+    const { friend } = JSON.parse(pending)
+
+    setPaymentFriend(friend)
+
+    localStorage.removeItem('pending_payment')
+  }
+
+  window.addEventListener('focus', onFocus)
+
+  return () => {
+    window.removeEventListener('focus', onFocus)
+  }
+}, [])
   const fetchFriends = async () => {
     setLoading(true)
     try { setFriends(await getFriends()) }
@@ -81,7 +100,14 @@ const Friends = () => {
     `&cu=INR` +
     `&tn=${encodeURIComponent('PaySplit settlement')}`
 
-  window.location.href = link
+  localStorage.setItem(
+  'pending_payment',
+  JSON.stringify({
+    friend: friend.name
+  })
+)
+
+window.location.href = link
 }
 
 const savePhone = async () => {
@@ -99,7 +125,19 @@ const savePhone = async () => {
     toast.error('Could not save number')
   }
 }
+  const confirmSettlement = async () => {
+  try {
+    await settleWithFriend(paymentFriend)
 
+    toast.success(`Settled with ${paymentFriend}`)
+
+    fetchFriends()
+
+    setPaymentFriend(null)
+  } catch {
+    toast.error('Could not settle')
+  }
+}
   const totalOwed  = friends.filter(f => f.balance > 0).reduce((s, f) => s + f.balance, 0)
   const totalOwing = friends.filter(f => f.balance < 0).reduce((s, f) => s + Math.abs(f.balance), 0)
 
@@ -403,6 +441,40 @@ const savePhone = async () => {
               </div>
             </div>
           </>
+        )}
+              {paymentFriend && (
+  <>
+    <div
+      className="modal-backdrop"
+      onClick={() => setPaymentFriend(null)}
+    />
+
+    <div className="bottom-sheet">
+      <h3 className="text-lg font-bold mb-3">
+        Payment Complete?
+      </h3>
+
+      <p className="text-gray-500 mb-5">
+        Did you successfully pay {paymentFriend}?
+      </p>
+
+      <div className="flex gap-3">
+        <button
+          onClick={() => setPaymentFriend(null)}
+          className="flex-1 py-3 rounded-2xl bg-gray-100"
+        >
+          Not Yet
+        </button>
+
+        <button
+          onClick={confirmSettlement}
+          className="flex-1 py-3 rounded-2xl bg-emerald-500 text-white"
+        >
+          Yes, Paid
+        </button>
+      </div>
+    </div>
+  </>
         )}
       <BottomNav />
     </div>
