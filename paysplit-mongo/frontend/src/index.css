@@ -113,16 +113,29 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ── Modal backdrop ─────────────────────── */
 .modal-backdrop {
+  position: fixed;
+  inset: 0;
   background: rgba(0, 0, 0, 0.48);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  z-index: 200;
 }
 
 /* ── Bottom sheet ───────────────────────── */
 .bottom-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 28rem; /* matches max-w-md used everywhere else */
   border-radius: 28px 28px 0 0;
   background: white;
   box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.14);
+  z-index: 201;
+  padding: 24px 24px max(24px, env(safe-area-inset-bottom, 24px));
+  max-height: 85vh;
+  overflow-y: auto;
 }
 
 /* ── Custom scrollbar ───────────────────── */

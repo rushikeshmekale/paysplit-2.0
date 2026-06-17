@@ -20,7 +20,7 @@ router.put('/:name', async (req, res) => {
     const { phone } = req.body
     const contact = await Contact.findOneAndUpdate(
       { user_id: req.user._id, friend_name },
-      { phone: phone || '' },
+      { $set: { phone: phone || '' } },
       { upsert: true, new: true }
     )
     res.json({ friend_name: contact.friend_name, phone: contact.phone })
