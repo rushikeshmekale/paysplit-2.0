@@ -75,6 +75,6 @@ export const updateProfile = (body) =>
   authFetch('/api/auth/profile', { method: 'PUT', body: JSON.stringify(body) })
 
 export const getContacts = () => authFetch('/api/contacts')
-export const updateContact = (name, phone) =>
-  authFetch(`/api/contacts/${encodeURIComponent(name)}`, { method: 'PUT', body: JSON.stringify({ phone }) })
+export const updateContact = (name, data) =>
+  authFetch(`/api/contacts/${encodeURIComponent(name)}`, { method: 'PUT', body: JSON.stringify(data) })
 

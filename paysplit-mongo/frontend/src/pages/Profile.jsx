@@ -19,6 +19,7 @@ const Profile = () => {
   const [editName, setEditName] = useState(user?.name || '')
   const [editPhone, setEditPhone] = useState(user?.phone || '')
   const [editImage, setEditImage] = useState(user?.profile_image || '')
+  const [editUpi, setEditUpi] = useState(user?.upi_id || '')
   const handleLogout = async () => {
     await logout()
     toast.success('See you soon! 👋')

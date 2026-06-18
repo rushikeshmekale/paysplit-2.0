@@ -5,6 +5,7 @@ const contactSchema = new mongoose.Schema(
     user_id:     { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     friend_name: { type: String, required: true, trim: true },
     phone:       { type: String, default: '' },
+    upi_id:      { type: String, default: '' },   // ADD THIS
   },
   { timestamps: true }
 )

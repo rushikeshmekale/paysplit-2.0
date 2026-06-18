@@ -58,7 +58,7 @@ router.get('/', async (req, res) => {
 
     const contacts = await Contact.find({ user_id: currentUser._id }).lean()
     const contactMap = {}
-    contacts.forEach(c => { contactMap[norm(c.friend_name)] = c.phone })
+    contacts.forEach(c => { contactMap[norm(c.friend_name)] = { phone: c.phone, upi_id: c.upi_id } })
 
     const friends = Array.from(friendSet).map(key => {
       const registeredUser = userMap[key]
@@ -68,7 +68,8 @@ router.get('/', async (req, res) => {
         name,
         email:         registeredUser?.email || `${name.toLowerCase()}@paysplit.app`,
         profile_image: registeredUser?.profile_image || null,
-        phone:         contactMap[key] || registeredUser?.phone || '',
+        phone: contactMap[key]?.phone || registeredUser?.phone || '',
+        upi_id: contactMap[key]?.upi_id || '',
         balance:       Math.round((balances[key] || 0) * 100) / 100,
         is_registered: !!registeredUser,
       }
