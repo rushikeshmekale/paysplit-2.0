@@ -30,6 +30,7 @@ const Profile = () => {
     const updated = await updateProfile({
       name: editName,
       phone: editPhone,
+      upi_id: editUpi,
       profile_image: editImage,
     })
 
@@ -137,7 +138,16 @@ const Profile = () => {
             placeholder="Phone number"
           />
         </div>
-
+        <div>
+          <label className="text-sm font-medium text-gray-600 block mb-1">Your UPI ID</label>
+          <input
+            type="text"
+            value={editUpi}
+            onChange={(e) => setEditUpi(e.target.value)}
+            className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            placeholder="yourname@bank"
+          />
+        </div>
         <div>
           <label className="text-sm font-medium text-gray-600 block mb-1">
             Profile Image URL
@@ -203,13 +213,14 @@ const Profile = () => {
           />
           <Row
             icon={<CreditCard size={18} className="text-gray-400" />}
-            label="Payment Methods"
+            label="Your UPI ID"
             right={
               <>
-                <span className="text-xs text-gray-400">UPI · Cards</span>
+                <span className="text-xs text-gray-400">{user?.upi_id || 'Not set'}</span>
                 <CaretRight size={16} className="text-gray-300" />
               </>
             }
+            onClick={() => setEditing(true)}
             border={false}
           />
         </div>

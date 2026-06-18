@@ -9,6 +9,7 @@ const userSchema = new mongoose.Schema(
     profile_image: { type: String, default: '' },
     social_credit_score: { type: Number, default: 850 },
     phone: { type: String, default: '' },
+    upi_id: { type: String, default: '' },
   },
   { timestamps: true }
 )

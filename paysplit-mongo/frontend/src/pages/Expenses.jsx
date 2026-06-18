@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import BottomNav from '../components/BottomNav'
 import SplitSlider from '../components/SplitSlider'
 import { createExpense, getExpenses, deleteExpense } from '../lib/api'
@@ -16,7 +16,7 @@ const inp = 'w-full px-4 py-3.5 bg-gray-50/80 border border-gray-100 rounded-2xl
 const Expenses = () => {
   const { user }  = useAuth()
   const location  = useLocation()
-
+  const navigate = useNavigate()
   const [expenses,   setExpenses]   = useState([])
   const [showModal,  setShowModal]  = useState(false)
   const [loading,    setLoading]    = useState(true)
@@ -32,17 +32,48 @@ const Expenses = () => {
   const validP      = participants.filter((p) => p.name.trim())
   const totalAmount = validP.reduce((s, p) => s + parseFloat(p.amount || 0), 0)
 
-  useEffect(() => {
-    fetchExpenses()
-    if (location.state?.voiceData) {
-      const { participants: vp, paidBy: vpb, title: vt, split_mode: vsm } = location.state.voiceData
-      setPaidBy(vpb)
-      setParticipants(vp.map((p) => ({ name: p.name, amount: p.amount.toString(), percentage: 0 })))
-      setTitle(vt || 'Voice Expense')
-      setSplitMode(vsm || 'custom')
-      setShowModal(true)
+ useEffect(() => {
+  fetchExpenses()
+
+  if (location.state?.voiceData) {
+    const {
+      participants: vp,
+      paidBy: vpb,
+      title: vt,
+      split_mode: vsm,
+      totalAmount: vta
+    } = location.state.voiceData
+
+    // clear old form values first
+    resetForm()
+
+    // apply voice values
+    setPaidBy(vpb)
+
+    setParticipants(
+      vp.map((p) => ({
+        name: p.name,
+        amount: p.amount.toString(),
+        percentage: 0
+      }))
+    )
+
+    setTitle(vt || 'Voice Expense')
+    setSplitMode(vsm || 'custom')
+
+    if (vta) {
+      setTotalBill(vta.toString())
     }
-  }, [location])
+
+    setShowModal(true)
+
+    // consume voice data once only
+    navigate(location.pathname, {
+      replace: true,
+      state: {}
+    })
+  }
+}, [location])
 
   // Lock body scroll when modal is open (prevents background scroll on mobile)
   useEffect(() => {

@@ -35,6 +35,7 @@ router.post('/register', async (req, res) => {
         email: user.email,
         profile_image: user.profile_image,
         phone: user.phone,
+        upi_id: user.upi_id,
         social_credit_score: user.social_credit_score,
 
       },
@@ -67,6 +68,7 @@ router.post('/login', async (req, res) => {
         email: user.email,
         profile_image: user.profile_image,
         phone: user.phone,
+        upi_id: user.upi_id,
         social_credit_score: user.social_credit_score,
       },
     })
@@ -76,6 +78,7 @@ router.post('/login', async (req, res) => {
 })
 
 // ── GET /api/auth/me ────────────────────────────────────────────
+// ── GET /api/auth/me ────────────────────────────────────────────
 router.get('/me', protect, async (req, res) => {
   res.json({
     id:    req.user._id,
@@ -83,6 +86,7 @@ router.get('/me', protect, async (req, res) => {
     email: req.user.email,
     profile_image: req.user.profile_image,
     phone: req.user.phone,
+    upi_id: req.user.upi_id,   // was: user.upi_id (undefined variable)
     social_credit_score: req.user.social_credit_score,
   })
 })
@@ -91,7 +95,7 @@ router.get('/me', protect, async (req, res) => {
 // Update name and/or profile_image for the logged-in user
 router.put('/profile', protect, async (req, res) => {
   try {
-    const { name, profile_image, phone } = req.body
+    const { name, profile_image, phone, upi_id } = req.body
     if (name !== undefined) {
       const trimmed = String(name).trim()
       if (!trimmed) return res.status(400).json({ message: 'Name cannot be empty' })
@@ -99,10 +103,12 @@ router.put('/profile', protect, async (req, res) => {
     }
     if (profile_image !== undefined) req.user.profile_image = profile_image
     if (phone !== undefined) req.user.phone = phone
+    if (upi_id !== undefined) req.user.upi_id = upi_id
     await req.user.save()
     res.json({
       id: req.user._id, name: req.user.name, email: req.user.email,
       profile_image: req.user.profile_image, phone: req.user.phone,
+      upi_id: req.user.upi_id,
       social_credit_score: req.user.social_credit_score,
     })
   } catch (err) {

@@ -1,3 +1,4 @@
+// backend/routes/friends.js
 import express from 'express'
 import User from '../models/User.js'
 import Expense from '../models/Expense.js'
@@ -7,71 +8,72 @@ import Contact from '../models/Contact.js'
 const router = express.Router()
 router.use(protect)
 
+const norm = (s) => (s || '').trim().toLowerCase()
+const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 // ── GET /api/friends ────────────────────────────────────────────
 router.get('/', async (req, res) => {
   try {
     const currentUser = req.user
-    const userName    = currentUser.name
+    const userKey      = norm(currentUser.name)
 
-    // Only NON-settled expenses for balance calculation
     const expenses = await Expense.find({
       user_id: currentUser._id,
       settled_at: null
     }).lean()
 
-    const balances  = {}
-    const friendSet = new Set()
+    const balances     = {}
+    const friendSet     = new Set()
+    const displayNames  = {}
 
     for (const exp of expenses) {
       if (exp.split_mode === 'no_split') continue
-      const paidBy = exp.paid_by
+      const paidByKey = norm(exp.paid_by)
 
-      if (paidBy === userName) {
-        // I paid the bill → every OTHER participant owes me their share
+      if (paidByKey === userKey) {
         for (const p of exp.participants || []) {
-          if (p.name === userName) continue
-          friendSet.add(p.name)
-          balances[p.name] = (balances[p.name] || 0) + Number(p.amount || 0)
+          const pKey = norm(p.name)
+          if (pKey === userKey) continue
+          friendSet.add(pKey)
+          if (!displayNames[pKey]) displayNames[pKey] = p.name
+          balances[pKey] = (balances[pKey] || 0) + Number(p.amount || 0)
         }
       } else {
-        // Someone else paid the bill → if I'm a participant, I owe them my share
-        friendSet.add(paidBy)
-        const myShare = (exp.participants || []).find(p => p.name === userName)
+        friendSet.add(paidByKey)
+        if (!displayNames[paidByKey]) displayNames[paidByKey] = exp.paid_by
+        const myShare = (exp.participants || []).find(p => norm(p.name) === userKey)
         if (myShare) {
-          balances[paidBy] = (balances[paidBy] || 0) - Number(myShare.amount || 0)
+          balances[paidByKey] = (balances[paidByKey] || 0) - Number(myShare.amount || 0)
         }
       }
     }
 
-    // Get registered users for profile info
     const registeredUsers = await User
       .find({ _id: { $ne: currentUser._id } })
       .select('name email profile_image')
       .lean()
 
     const userMap = {}
-    registeredUsers.forEach(u => { userMap[u.name] = u })
+    registeredUsers.forEach(u => { userMap[norm(u.name)] = u })
 
     const contacts = await Contact.find({ user_id: currentUser._id }).lean()
     const contactMap = {}
-    contacts.forEach(c => { contactMap[c.friend_name] = c.phone })
+    contacts.forEach(c => { contactMap[norm(c.friend_name)] = c.phone })
 
-    // Build friends list — include anyone with non-zero balance OR who is a registered user
-    const friends = Array.from(friendSet)
-      .map(friendName => {
-        const registeredUser = userMap[friendName]
-        return {
-          id:            registeredUser?._id?.toString() || friendName,
-          name:          friendName,
-          email:         registeredUser?.email || `${friendName.toLowerCase()}@paysplit.app`,
-          profile_image: registeredUser?.profile_image || null,
-          phone: contactMap[friendName] || registeredUser?.phone || '',
-          balance:       Math.round((balances[friendName] || 0) * 100) / 100,
-          is_registered: !!registeredUser,
-        }
-      })
+    const friends = Array.from(friendSet).map(key => {
+      const registeredUser = userMap[key]
+      const name = displayNames[key] || key
+      return {
+        id:            registeredUser?._id?.toString() || key,
+        name,
+        email:         registeredUser?.email || `${name.toLowerCase()}@paysplit.app`,
+        profile_image: registeredUser?.profile_image || null,
+        phone:         contactMap[key] || registeredUser?.phone || '',
+        balance:       Math.round((balances[key] || 0) * 100) / 100,
+        is_registered: !!registeredUser,
+      }
+    })
 
-    // Sort: people who owe you first (desc), then who you owe (desc), then settled
     friends.sort((a, b) => {
       if (a.balance > 0 && b.balance <= 0) return -1
       if (b.balance > 0 && a.balance <= 0) return 1
@@ -94,23 +96,17 @@ router.post('/:name/settle', async (req, res) => {
     const currentUser = req.user
     const userName    = currentUser.name
 
-    // Mark ALL unsettled expenses between these two people as settled
+    const friendRegex = new RegExp(`^${escapeRegex(friendName.trim())}$`, 'i')
+    const userRegex   = new RegExp(`^${escapeRegex(userName.trim())}$`, 'i')
+
     const result = await Expense.updateMany(
       {
         user_id:    currentUser._id,
         settled_at: null,
         split_mode: { $ne: 'no_split' },
         $or: [
-          // I paid, friend is a participant
-          {
-            paid_by: userName,
-            'participants.name': friendName
-          },
-          // Friend paid, I am a participant
-          {
-            paid_by: friendName,
-            'participants.name': userName
-          },
+          { paid_by: userRegex, 'participants.name': friendRegex },
+          { paid_by: friendRegex, 'participants.name': userRegex },
         ],
       },
       { $set: { settled_at: new Date() } }

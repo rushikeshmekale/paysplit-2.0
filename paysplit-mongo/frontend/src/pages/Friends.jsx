@@ -19,43 +19,42 @@ const Friends = () => {
   const [loading,   setLoading]   = useState(true)
   const [settling,  setSettling]  = useState(null)
   const [filter,    setFilter]    = useState('all') // all | owe | owed
+
+  // contacts shape: { [friendName]: { phone, upi_id } }
   const [contacts, setContacts] = useState({})
-  const [phoneModalFor, setPhoneModalFor] = useState(null)
+
+  const [editFor, setEditFor]     = useState(null) // friend name being edited
   const [phoneInput, setPhoneInput] = useState('')
+  const [upiInput, setUpiInput]     = useState('')
+
   const [paymentFriend, setPaymentFriend] = useState(null)
-  useEffect(() => {
-  getContacts()
-    .then(list => {
-      const map = {}
 
-      list.forEach(c => {
-        map[c.friend_name] = c.phone
+  useEffect(() => {
+    getContacts()
+      .then(list => {
+        const map = {}
+        list.forEach(c => {
+          map[c.friend_name] = { phone: c.phone, upi_id: c.upi_id }
+        })
+        setContacts(map)
       })
+      .catch(() => {})
+  }, [])
 
-      setContacts(map)
-    })
-    .catch(() => {})
-}, [])
   useEffect(() => { fetchFriends() }, [])
+
   useEffect(() => {
-  const onFocus = () => {
-    const pending = localStorage.getItem('pending_payment')
+    const onFocus = () => {
+      const pending = localStorage.getItem('pending_payment')
+      if (!pending) return
+      const { friend } = JSON.parse(pending)
+      setPaymentFriend(friend)
+      localStorage.removeItem('pending_payment')
+    }
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [])
 
-    if (!pending) return
-
-    const { friend } = JSON.parse(pending)
-
-    setPaymentFriend(friend)
-
-    localStorage.removeItem('pending_payment')
-  }
-
-  window.addEventListener('focus', onFocus)
-
-  return () => {
-    window.removeEventListener('focus', onFocus)
-  }
-}, [])
   const fetchFriends = async () => {
     setLoading(true)
     try { setFriends(await getFriends()) }
@@ -64,80 +63,126 @@ const Friends = () => {
   }
 
   const handleSettle = async (name) => {
-  setSettling(name)
-  try {
-    const result = await settleWithFriend(name)
-    if (result.settled_count > 0) {
-      toast.success(`✅ Settled with ${name}!`)
-    } else {
-      toast.info(`Nothing to settle with ${name}`)
+    setSettling(name)
+    try {
+      const result = await settleWithFriend(name)
+      if (result.settled_count > 0) {
+        toast.success(`✅ Settled with ${name}!`)
+      } else {
+        toast.info(`Nothing to settle with ${name}`)
+      }
+      fetchFriends()
+    } catch {
+      toast.error('Failed to settle')
     }
-    fetchFriends()
-  } catch {
-    toast.error('Failed to settle')
+    setSettling(null)
   }
-  setSettling(null)
-}
-  const handlePing = (name) => {
-    toast.success(`🔔 Reminder sent to ${name}!`)
+
+  const onlyDigits = (value = '') => value.replace(/\D/g, '')
+
+  const toIntlNumber = (phone = '') => {
+    const digits = onlyDigits(phone)
+    if (!digits) return null
+    if (digits.length === 10) return `91${digits}`
+    if (digits.length === 12 && digits.startsWith('91')) return digits
+    return digits
+  }
+
+  const openContactEditor = (friend) => {
+    setEditFor(friend.name)
+    setPhoneInput(contacts[friend.name]?.phone || friend.phone || '')
+    setUpiInput(contacts[friend.name]?.upi_id || '')
+  }
+
+  const saveContact = async () => {
+    try {
+      await updateContact(editFor, { phone: phoneInput, upi_id: upiInput })
+      setContacts(prev => ({
+        ...prev,
+        [editFor]: { phone: phoneInput, upi_id: upiInput },
+      }))
+      toast.success('Contact saved')
+      setEditFor(null)
+    } catch {
+      toast.error('Could not save contact')
+    }
+  }
+
+  const handleRequest = (friend) => {
+    if (!user?.upi_id) {
+      toast.error('Add your UPI ID in Profile first')
+      return
+    }
+
+    const rawPhone = contacts[friend.name]?.phone || friend.phone
+    const intl = toIntlNumber(rawPhone)
+    if (!intl) {
+      toast.error(`Add a phone number for ${friend.name} first`)
+      openContactEditor(friend)
+      return
+    }
+
+    const amount = Math.abs(friend.balance).toFixed(0)
+
+    const payLink =
+      `upi://pay?pa=${encodeURIComponent(user.upi_id)}` +
+      `&pn=${encodeURIComponent(user.name)}` +
+      `&am=${amount}` +
+      `&cu=INR` +
+      `&tn=${encodeURIComponent('PaySplit settlement')}`
+
+    const message =
+      `💰 *Payment Request* 💰\n\n` +
+      `Hey ${friend.name}! 👋\n\n` +
+      `You owe me ₹${amount} on PaySplit.\n\n` +
+      `Tap below to pay instantly 👇\n${payLink}\n\n` +
+      `Thanks! 🙏`
+
+    window.open(
+      `https://wa.me/${intl}?text=${encodeURIComponent(message)}`,
+      '_blank'
+    )
+
+    toast.success(`Opened WhatsApp request for ${friend.name}`)
   }
 
   const handlePay = (friend) => {
-  const upiId = contacts[friend.name] || friend.phone
+    const upiId = contacts[friend.name]?.upi_id
 
-  if (!upiId) {
-  setPhoneModalFor(friend.name)
-  setPhoneInput('')
-  return
-}
+    if (!upiId) {
+      toast.error(`Add a UPI ID for ${friend.name} first`)
+      openContactEditor(friend)
+      return
+    }
 
-  const amount = Math.abs(friend.balance).toFixed(2)
+    const amount = Math.abs(friend.balance).toFixed(2)
 
-  const link =
-    `upi://pay?pa=${encodeURIComponent(upiId)}` +
-    `&pn=${encodeURIComponent(friend.name)}` +
-    `&am=${amount}` +
-    `&cu=INR` +
-    `&tn=${encodeURIComponent('PaySplit settlement')}`
+    const link =
+      `upi://pay?pa=${encodeURIComponent(upiId)}` +
+      `&pn=${encodeURIComponent(friend.name)}` +
+      `&am=${amount}` +
+      `&cu=INR` +
+      `&tn=${encodeURIComponent('PaySplit settlement')}`
 
-  localStorage.setItem(
-  'pending_payment',
-  JSON.stringify({
-    friend: friend.name
-  })
-)
+    localStorage.setItem(
+      'pending_payment',
+      JSON.stringify({ friend: friend.name })
+    )
 
-window.location.href = link
-}
-
-const savePhone = async () => {
-  try {
-    await updateContact(phoneModalFor, phoneInput)
-
-    setContacts(prev => ({
-      ...prev,
-      [phoneModalFor]: phoneInput,
-    }))
-
-    toast.success('Number saved')
-    setPhoneModalFor(null)
-  } catch {
-    toast.error('Could not save number')
+    window.location.href = link
   }
-}
+
   const confirmSettlement = async () => {
-  try {
-    await settleWithFriend(paymentFriend)
-
-    toast.success(`Settled with ${paymentFriend}`)
-
-    fetchFriends()
-
-    setPaymentFriend(null)
-  } catch {
-    toast.error('Could not settle')
+    try {
+      await settleWithFriend(paymentFriend)
+      toast.success(`Settled with ${paymentFriend}`)
+      fetchFriends()
+      setPaymentFriend(null)
+    } catch {
+      toast.error('Could not settle')
+    }
   }
-}
+
   const totalOwed  = friends.filter(f => f.balance > 0).reduce((s, f) => s + f.balance, 0)
   const totalOwing = friends.filter(f => f.balance < 0).reduce((s, f) => s + Math.abs(f.balance), 0)
 
@@ -277,13 +322,10 @@ const savePhone = async () => {
                           <h3 className="font-bold text-gray-900">{friend.name}</h3>
                           <div className="flex items-center gap-2">
                             <button
-                              onClick={() => {
-                                setPhoneModalFor(friend.name)
-                                setPhoneInput(contacts[friend.name] || '')
-                              }}
+                              onClick={() => openContactEditor(friend)}
                               className="text-[10px] text-[#7c3aed] font-bold"
                             >
-                              {contacts[friend.name] ? 'Edit Number' : 'Add Number'}
+                              {contacts[friend.name]?.phone || contacts[friend.name]?.upi_id ? 'Edit Contact' : 'Add Contact'}
                             </button>
                           </div>
                           <p className="text-xs text-gray-400 truncate">{friend.email}</p>
@@ -365,13 +407,13 @@ const savePhone = async () => {
                           )}
                         </button>
 
-                        {/* Ping/Remind button — only if they owe you */}
+                        {/* Request button — only if they owe you */}
                         {isPos && (
                           <button
-                            onClick={() => handlePing(friend.name)}
+                            onClick={() => handleRequest(friend)}
                             className="flex-1 py-2.5 bg-amber-50 text-amber-600 rounded-xl font-bold text-xs transition-all active:scale-95 flex items-center justify-center gap-1.5 hover:bg-amber-100"
                           >
-                            <Bell size={16} weight="fill" /> Remind
+                            <Bell size={16} weight="fill" /> Request
                           </button>
                         )}
                       </div>
@@ -398,84 +440,91 @@ const savePhone = async () => {
         )}
 
       </div>
-              {phoneModalFor && (
-          <>
-            <div
-              className="modal-backdrop"
-              onClick={() => setPhoneModalFor(null)}
+
+      {editFor && (
+        <>
+          <div
+            className="modal-backdrop"
+            onClick={() => setEditFor(null)}
+          />
+
+          <div className="bottom-sheet">
+            <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-5" />
+
+            <h3 className="text-lg font-bold mb-4">Contact Details</h3>
+            <p className="text-sm text-gray-500 mb-3">{editFor}</p>
+
+            <label className="text-xs font-bold text-gray-500 block mb-1">
+              UPI ID (for Pay)
+            </label>
+            <input
+              type="text"
+              value={upiInput}
+              onChange={(e) => setUpiInput(e.target.value)}
+              placeholder="friend@bank"
+              className="w-full px-4 py-3 border rounded-2xl mb-3"
             />
 
-            <div className="bottom-sheet">
-              <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-5" />
+            <label className="text-xs font-bold text-gray-500 block mb-1">
+              Phone Number (for Request)
+            </label>
+            <input
+              type="text"
+              value={phoneInput}
+              onChange={(e) => setPhoneInput(e.target.value)}
+              placeholder="9876543210"
+              className="w-full px-4 py-3 border rounded-2xl"
+            />
 
-              <h3 className="text-lg font-bold mb-4">
-                Save UPI Number
-              </h3>
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={() => setEditFor(null)}
+                className="flex-1 py-3 rounded-2xl bg-gray-100"
+              >
+                Cancel
+              </button>
 
-              <p className="text-sm text-gray-500 mb-3">
-                {phoneModalFor}
-              </p>
-
-              <input
-                type="text"
-                value={phoneInput}
-                onChange={(e) => setPhoneInput(e.target.value)}
-                placeholder="rushikesh@ybl"
-                className="w-full px-4 py-3 border rounded-2xl"
-              />
-
-              <div className="flex gap-3 mt-4">
-                <button
-                  onClick={() => setPhoneModalFor(null)}
-                  className="flex-1 py-3 rounded-2xl bg-gray-100"
-                >
-                  Cancel
-                </button>
-
-                <button
-                  onClick={savePhone}
-                  className="flex-1 py-3 rounded-2xl bg-[#7c3aed] text-white"
-                >
-                  Save
-                </button>
-              </div>
+              <button
+                onClick={saveContact}
+                className="flex-1 py-3 rounded-2xl bg-[#7c3aed] text-white"
+              >
+                Save
+              </button>
             </div>
-          </>
-        )}
-              {paymentFriend && (
-  <>
-    <div
-      className="modal-backdrop"
-      onClick={() => setPaymentFriend(null)}
-    />
+          </div>
+        </>
+      )}
 
-    <div className="bottom-sheet">
-      <h3 className="text-lg font-bold mb-3">
-        Payment Complete?
-      </h3>
+      {paymentFriend && (
+        <>
+          <div
+            className="modal-backdrop"
+            onClick={() => setPaymentFriend(null)}
+          />
 
-      <p className="text-gray-500 mb-5">
-        Did you successfully pay {paymentFriend}?
-      </p>
+          <div className="bottom-sheet">
+            <h3 className="text-lg font-bold mb-3">Payment Complete?</h3>
+            <p className="text-gray-500 mb-5">Did you successfully pay {paymentFriend}?</p>
 
-      <div className="flex gap-3">
-        <button
-          onClick={() => setPaymentFriend(null)}
-          className="flex-1 py-3 rounded-2xl bg-gray-100"
-        >
-          Not Yet
-        </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setPaymentFriend(null)}
+                className="flex-1 py-3 rounded-2xl bg-gray-100"
+              >
+                Not Yet
+              </button>
 
-        <button
-          onClick={confirmSettlement}
-          className="flex-1 py-3 rounded-2xl bg-emerald-500 text-white"
-        >
-          Yes, Paid
-        </button>
-      </div>
-    </div>
-  </>
-        )}
+              <button
+                onClick={confirmSettlement}
+                className="flex-1 py-3 rounded-2xl bg-emerald-500 text-white"
+              >
+                Yes, Paid
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
       <BottomNav />
     </div>
   )
