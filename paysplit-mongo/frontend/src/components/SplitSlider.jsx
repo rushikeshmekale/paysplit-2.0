@@ -22,7 +22,7 @@ const MODES = [
 ]
 
 const SplitSlider = ({ participants = [], totalAmount = 0, onChange, onModeChange }) => {
-  const [mode, setMode] = useState('equal')
+  const [mode, setMode] = useState('custom')
   const total = Number(totalAmount) || 0
   const names = participants.map((p) => p.name).filter(Boolean)
 
@@ -104,27 +104,29 @@ const SplitSlider = ({ participants = [], totalAmount = 0, onChange, onModeChang
       )}
 
       {/* EQUAL */}
-      {mode === 'equal' && (
-        <div className="space-y-2">
-          {participants.filter((p) => p.name).map((p, i) => (
-            <div key={i} className="flex items-center justify-between px-4 py-3 bg-gray-50 rounded-2xl">
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
-                  style={{ background: COLORS[i % COLORS.length] }}
-                >
-                  {p.name[0]?.toUpperCase()}
+        {mode === 'equal' && (
+          <div className="space-y-2">
+            {participants.filter((p) => p.name).map((p, i) => (
+              <div key={i} className="flex items-center justify-between px-4 py-3 bg-gray-50 rounded-2xl">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
+                    style={{ background: COLORS[i % COLORS.length] }}
+                  >
+                    {p.name[0]?.toUpperCase()}
+                  </div>
+                  <span className="text-sm font-semibold text-gray-800">{p.name}</span>
                 </div>
-                <span className="text-sm font-semibold text-gray-800">{p.name}</span>
+                <div className="text-right">
+                  <p className="text-sm font-bold text-[#7c3aed]">₹{Number(p.amount || 0).toFixed(2)}</p>
+                  {participants.filter(x => x.name).length > 1 && (
+                    <p className="text-[10px] text-gray-400">{Number(p.percentage || 0).toFixed(1)}%</p>
+                  )}
+                </div>
               </div>
-              <div className="text-right">
-                <p className="text-sm font-bold text-[#7c3aed]">₹{Number(p.amount || 0).toFixed(2)}</p>
-                <p className="text-[10px] text-gray-400">{Number(p.percentage || 0).toFixed(1)}%</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
 
       {/* PERCENTAGE */}
       {mode === 'percentage' && (

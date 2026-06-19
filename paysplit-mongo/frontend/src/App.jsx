@@ -1,3 +1,4 @@
+import InstallPrompt from './components/InstallPrompt'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
@@ -23,6 +24,7 @@ function App() {
         </Routes>
       </BrowserRouter>
       <Toaster position="top-center" richColors expand />
+      <InstallPrompt />
     </AuthProvider>
   )
 }

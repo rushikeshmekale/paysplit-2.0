@@ -378,45 +378,50 @@ const Friends = () => {
                       )}
 
                       {/* Action buttons */}
-                      <div className="flex gap-2">
-                        {/* Pay button */}
-                        <button
-                          onClick={() => handlePay(friend)}
-                          className="flex-1 py-2.5 bg-purple-50 text-[#7c3aed] rounded-xl font-bold text-xs transition-all active:scale-95 flex items-center justify-center gap-1.5 hover:bg-purple-100"
-                        >
-                          <CurrencyCircleDollar size={16} weight="fill" /> Pay
-                        </button>
+                      {/* Action buttons */}
+                        <div className="flex gap-2">
 
-                        {/* Settle button */}
-                        <button
-                          onClick={() => handleSettle(friend.name)}
-                          disabled={settling === friend.name}
-                          className={`flex-1 py-2.5 rounded-xl font-bold text-xs transition-all active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-60 ${
-                            isNeutral
-                              ? 'bg-gray-100 text-gray-400 cursor-default'
-                              : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
-                          }`}
-                        >
-                          {settling === friend.name ? (
-                            <div className="w-4 h-4 border-2 border-emerald-300 border-t-emerald-600 rounded-full animate-spin" />
-                          ) : (
-                            <>
-                              <Handshake size={16} weight="fill" />
-                              {isNeutral ? 'Settled ✓' : 'Mark Settled'}
-                            </>
+                          {/* Pay button — only if YOU owe them */}
+                          {isNeg && (
+                            <button
+                              onClick={() => handlePay(friend)}
+                              className="flex-1 py-2.5 bg-purple-50 text-[#7c3aed] rounded-xl font-bold text-xs transition-all active:scale-95 flex items-center justify-center gap-1.5 hover:bg-purple-100"
+                            >
+                              <CurrencyCircleDollar size={16} weight="fill" /> Pay
+                            </button>
                           )}
-                        </button>
 
-                        {/* Request button — only if they owe you */}
-                        {isPos && (
+                          {/* Settle button */}
                           <button
-                            onClick={() => handleRequest(friend)}
-                            className="flex-1 py-2.5 bg-amber-50 text-amber-600 rounded-xl font-bold text-xs transition-all active:scale-95 flex items-center justify-center gap-1.5 hover:bg-amber-100"
+                            onClick={() => handleSettle(friend.name)}
+                            disabled={settling === friend.name}
+                            className={`flex-1 py-2.5 rounded-xl font-bold text-xs transition-all active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-60 ${
+                              isNeutral
+                                ? 'bg-gray-100 text-gray-400 cursor-default'
+                                : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
+                            }`}
                           >
-                            <Bell size={16} weight="fill" /> Request
+                            {settling === friend.name ? (
+                              <div className="w-4 h-4 border-2 border-emerald-300 border-t-emerald-600 rounded-full animate-spin" />
+                            ) : (
+                              <>
+                                <Handshake size={16} weight="fill" />
+                                {isNeutral ? 'Settled ✓' : 'Mark Settled'}
+                              </>
+                            )}
                           </button>
-                        )}
-                      </div>
+
+                          {/* Request button — only if THEY owe you */}
+                          {isPos && (
+                            <button
+                              onClick={() => handleRequest(friend)}
+                              className="flex-1 py-2.5 bg-amber-50 text-amber-600 rounded-xl font-bold text-xs transition-all active:scale-95 flex items-center justify-center gap-1.5 hover:bg-amber-100"
+                            >
+                              <Bell size={16} weight="fill" /> Request
+                            </button>
+                          )}
+
+                        </div>
                     </div>
                   </div>
                 </div>

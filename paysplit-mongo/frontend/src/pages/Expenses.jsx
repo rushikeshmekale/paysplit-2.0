@@ -26,7 +26,7 @@ const Expenses = () => {
   const [paidBy,       setPaidBy]       = useState('')
   const [participants, setParticipants] = useState([{ name:'', amount:'', percentage:0 }])
   const [category,     setCategory]     = useState('Food')
-  const [splitMode,    setSplitMode]    = useState('equal')
+  const [splitMode, setSplitMode] = useState('custom')
   const [totalBill,    setTotalBill]    = useState('')
 
   const validP      = participants.filter((p) => p.name.trim())

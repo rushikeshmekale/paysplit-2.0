@@ -97,90 +97,7 @@ const Profile = () => {
 
           <h2 className="text-xl font-bold text-gray-900">{user?.name ?? 'User'}</h2>
           <p className="text-sm text-gray-400 mt-0.5">{user?.email}</p>
- {editing && (
-  <>
-    {/* Backdrop */}
-    <div
-      className="modal-backdrop"
-      onClick={() => setEditing(false)}
-    />
 
-    {/* Bottom Sheet */}
-    <div className="bottom-sheet">
-      <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-5" />
-
-      <h3 className="text-lg font-bold text-gray-900 mb-4">
-        Edit Profile
-      </h3>
-
-      <div className="space-y-4">
-        <div>
-          <label className="text-sm font-medium text-gray-600 block mb-1">
-            Name
-          </label>
-          <input
-            type="text"
-            value={editName}
-            onChange={(e) => setEditName(e.target.value)}
-            className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
-            placeholder="Your name"
-          />
-        </div>
-
-        <div>
-          <label className="text-sm font-medium text-gray-600 block mb-1">
-            Phone
-          </label>
-          <input
-            type="tel"
-            value={editPhone}
-            onChange={(e) => setEditPhone(e.target.value)}
-            className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
-            placeholder="Phone number"
-          />
-        </div>
-        <div>
-          <label className="text-sm font-medium text-gray-600 block mb-1">Your UPI ID</label>
-          <input
-            type="text"
-            value={editUpi}
-            onChange={(e) => setEditUpi(e.target.value)}
-            className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
-            placeholder="yourname@bank"
-          />
-        </div>
-        <div>
-          <label className="text-sm font-medium text-gray-600 block mb-1">
-            Profile Image URL
-          </label>
-          <input
-            type="text"
-            value={editImage}
-            onChange={(e) => setEditImage(e.target.value)}
-            className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
-            placeholder="https://..."
-          />
-        </div>
-
-        <div className="flex gap-3 pt-2">
-          <button
-            onClick={() => setEditing(false)}
-            className="flex-1 py-3 rounded-2xl bg-gray-100 font-semibold text-gray-700"
-          >
-            Cancel
-          </button>
-
-          <button
-            onClick={saveProfile}
-            className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-[#7c3aed] to-[#a855f7] text-white font-semibold"
-          >
-            Save
-          </button>
-        </div>
-      </div>
-    </div>
-  </>
-)}
 
           {/* Score badge */}
           <div className={`mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full border ${sBg}`}>
@@ -303,6 +220,91 @@ const Profile = () => {
         </button>
 
       </div>
+
+       {editing && (
+          <>
+            {/* Backdrop */}
+            <div
+              className="modal-backdrop"
+              onClick={() => setEditing(false)}
+            />
+
+            {/* Bottom Sheet */}
+            <div className="bottom-sheet">
+              <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-5" />
+
+              <h3 className="text-lg font-bold text-gray-900 mb-4">
+                Edit Profile
+              </h3>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-600 block mb-1">
+                    Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="Your name"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-600 block mb-1">
+                    Phone
+                  </label>
+                  <input
+                    type="tel"
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="Phone number"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600 block mb-1">Your UPI ID</label>
+                  <input
+                    type="text"
+                    value={editUpi}
+                    onChange={(e) => setEditUpi(e.target.value)}
+                    className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="yourname@bank"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600 block mb-1">
+                    Profile Image URL
+                  </label>
+                  <input
+                    type="text"
+                    value={editImage}
+                    onChange={(e) => setEditImage(e.target.value)}
+                    className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="https://..."
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={() => setEditing(false)}
+                    className="flex-1 py-3 rounded-2xl bg-gray-100 font-semibold text-gray-700"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    onClick={saveProfile}
+                    className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-[#7c3aed] to-[#a855f7] text-white font-semibold"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       <BottomNav />
     </div>
   )

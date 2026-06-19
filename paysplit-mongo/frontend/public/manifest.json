@@ -8,6 +8,7 @@
   "orientation": "portrait",
   "theme_color": "#7c3aed",
   "background_color": "#ede9ff",
+  "prefer_related_applications": false,
   "categories": ["finance", "utilities"],
   "icons": [
     {
